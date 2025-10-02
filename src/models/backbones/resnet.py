@@ -64,8 +64,18 @@ class Bottleneck(nn.Module):
         # 4. Add skip connection (identity or downsample if needed)
         # 5. Apply final ReLU activation
         # Remember to handle the downsample path when stride > 1
-        raise NotImplementedError("Bottleneck.forward() not implemented")
-        # =============================================================
+        
+        # Following the five steps
+        x_1 = self.relu(self.bn1(self.conv1(x)))
+        x_2 = self.relu(self.bn2(self.conv2(x_1)))
+        x_3 = self.bn1(self.conv1(x_2))
+        if self.downsample():
+          x_4 = self.downsample(x) + x_3
+        else:
+          x_4 = x + x_3
+        x_5 = self.relu(x_4)
+        return x_5
+
 
 
 def _make_block(inplanes: int, planes: int, blocks: int, stride: int = 1) -> nn.Sequential:
