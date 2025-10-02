@@ -125,8 +125,14 @@ class ResNet(nn.Module):
         # 3. Apply global average pooling and flatten
         # 4. Apply final fully connected layer
         # This should match the torchvision ResNet-50 structure
-        raise NotImplementedError("ResNet.forward() not implemented")
-        # ========================================================
+        
+        # Birger: Follow the standard ResNet-50 architecture as described above
+        x_1 = self.maxpool(self.relu(self.bn1(self.conv1(x))))
+        x_2 = self.layer4(self.layer3(self.layer2(self.layer1(x_1))))
+        x_3 = torch.flatten(self.avgpool(x_2), 1)
+        x_4 = self.fc(x_3)
+        return x_3
+
 
 
 class BackboneWithFPN(nn.Module):
