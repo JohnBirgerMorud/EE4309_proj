@@ -219,8 +219,25 @@ def build_resnet50_fpn_backbone(config: Optional[ResNetBackboneConfig] = None) -
     #    (hint: use backbone.fc.in_features to determine channel progression)
     # 4. Create and return BackboneWithFPN with all components
     # This integrates ResNet feature extraction with FPN multi-scale features
-    raise NotImplementedError("build_resnet50_fpn_backbone() not implemented")
-    # ===================================================================
+    
+    #Birger: Implement structure as described above
+    #1
+    RN = ResNet()
+    #_load_pretrained_weights(RN, config)
+    #_freeze_backbone_layers(RN)
+    #2
+    return_layers = {
+    'layer1': '0',
+    'layer2': '1',
+    'layer3': '2',
+    'layer4': '3',
+}
+    #3
+    k = RN.inplanes * Bottleneck.expansion
+    in_channels_list = [k, 2*k, 4*k, 8*k]
+    #4
+    return BackboneWithFPN(RN, return_layers, in_channels_list, config.out_channels)
+
 
 
 RESNET_FPN_FEATMAP_NAMES = ("0", "1", "2", "3")
