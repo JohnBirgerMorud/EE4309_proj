@@ -162,8 +162,11 @@ class BackboneWithFPN(nn.Module):
         # 2. Pass features through FPN (self.fpn) to create feature pyramid
         # 3. Return the FPN output (OrderedDict of multi-scale features)
         # This creates the feature pyramid needed for multi-scale detection
-        raise NotImplementedError("BackboneWithFPN.forward() not implemented")
-        # =================================================================
+        
+        #Birger: Folloes the backbone structure described above
+        x_1 = self.body(x)
+        x_2 = self.fpn(x_1)
+        return x_2
 
 
 @dataclass
