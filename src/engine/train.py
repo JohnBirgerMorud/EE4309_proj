@@ -129,26 +129,25 @@ def main():
             # 5. Update scaler for mixed precision training
             
             # Birger: 
-            model.optimizer.zero_grad()
-            with torch.cuda.amp.autocast(enabled=model.mixed_precision):
+            optim.zero_grad()
+            with torch.cuda.amp.autocast(enabled=use_amp):
               loss_dict = model(images, targets)
               tot_loss = sum(loss for loss in loss_dict.values())
     
-            if model.mixed_precision:
+            if use_amp:
                 scaler.scale(tot_loss).backward()
-                scaler.step(model.optimizer)
+                scaler.step(optim)
                 scaler.update()
             else:
                 tot_loss.backward()
-                model.optimizer.step()
+                optim.step()
 
-                sched.step()
-            
             loss_sum += tot_loss.item()
-            
-            #Given
-            avg_loss = loss_sum / len(train_loader)
-            save_jsonl([{"epoch": epoch, "loss": avg_loss}], os.path.join(args.output, "logs.jsonl"))
+        
+        sched.step()            
+        #Given
+        avg_loss = loss_sum / len(train_loader)
+        save_jsonl([{"epoch": epoch, "loss": avg_loss}], os.path.join(args.output, "logs.jsonl"))
 
         # ===== STUDENT TODO: Implement mAP evaluation =====
         # Hint: Implement validation loop to compute mAP@0.5:
@@ -160,8 +159,23 @@ def main():
         #    - Update metric with predictions and ground truth targets
         # 4. Compute final mAP and extract the "map" value
         # Handle exceptions gracefully and set map50 = -1.0 if evaluation fails
+        
+        # Birger:
+        from torchmetrics import MeanAveragePrecision as mAP
+        model.eval()
+        metric = mAP(iou_type='bbox')
         try:
-            raise NotImplementedError("mAP evaluation not implemented")
+          with torch.no_grad():
+            for images, targets in val_loader:
+              images = [img.to(device) for img in images]
+              targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
+              outputs = model(images)  
+
+              metric.update(outputs, targets)
+
+          results = metric.compute()
+          map50 = results['map_50']
+          
         except Exception as e:
             print("Eval skipped due to:", e)
             map50 = -1.0
