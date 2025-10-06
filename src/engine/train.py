@@ -127,15 +127,28 @@ def main():
             # 3. Sum all losses from the loss dictionary
             # 4. Backward pass: scale losses, compute gradients, step optimizer
             # 5. Update scaler for mixed precision training
-            raise NotImplementedError("Training step not implemented")
-            # ==================================================
+            
+            # Birger: 
+            model.optimizer.zero_grad()
+            with torch.cuda.amp.autocast(enabled=model.mixed_precision):
+              loss_dict = model(images, targets)
+              tot_loss = sum(loss for loss in loss_dict.values())
+    
+            if model.mixed_precision:
+                scaler.scale(tot_loss).backward()
+                scaler.step(model.optimizer)
+                scaler.update()
+            else:
+                tot_loss.backward()
+                model.optimizer.step()
 
-            loss_sum += losses.item()
-            pbar.set_postfix(loss=f"{losses.item():.3f}")
-
-        sched.step()
-        avg_loss = loss_sum / len(train_loader)
-        save_jsonl([{"epoch": epoch, "loss": avg_loss}], os.path.join(args.output, "logs.jsonl"))
+                sched.step()
+            
+            loss_sum += tot_loss.item()
+            
+            #Given
+            avg_loss = loss_sum / len(train_loader)
+            save_jsonl([{"epoch": epoch, "loss": avg_loss}], os.path.join(args.output, "logs.jsonl"))
 
         # ===== STUDENT TODO: Implement mAP evaluation =====
         # Hint: Implement validation loop to compute mAP@0.5:
