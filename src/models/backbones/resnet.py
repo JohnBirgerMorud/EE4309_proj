@@ -222,6 +222,8 @@ def build_resnet50_fpn_backbone(config: Optional[ResNetBackboneConfig] = None) -
     
     #Birger: Implement structure as described above
     #1
+    if config == None:
+      config = ResNetBackboneConfig()
     RN = ResNet()
     #_load_pretrained_weights(RN, config)
     #_freeze_backbone_layers(RN)
@@ -235,6 +237,7 @@ def build_resnet50_fpn_backbone(config: Optional[ResNetBackboneConfig] = None) -
     #3
     k = RN.inplanes * Bottleneck.expansion
     in_channels_list = [k, 2*k, 4*k, 8*k]
+
     #4
     return BackboneWithFPN(RN, return_layers, in_channels_list, config.out_channels)
 

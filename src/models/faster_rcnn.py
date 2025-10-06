@@ -98,8 +98,28 @@ def build_faster_rcnn(
     #    - config parameters for detection thresholds
     # 4. Replace the box predictor head for the correct number of classes
     # 5. Return the assembled model
-    raise NotImplementedError("build_faster_rcnn() not implemented")
-    # =========================================================
+    
+    #Birger: 
+    if config == None:
+      config = DetectorConfig()
+    backbone_module = backbone.body
+    backbone_module.out_channels = backbone.out_channels
+
+    rpn_head = rpn_head_factory(backbone_module.out_channels)
+
+    model = FasterRCNN(
+        backbone=backbone_module,
+        num_classes=None,
+        rpn_anchor_generator=anchor_generator,
+        rpn_head=rpn_head,
+        box_roi_pool=roi_pool,
+        **config.to_kwargs(),
+    )
+
+    in_features = model.roi_heads.box_predictor.cls_score.in_features
+    model.roi_heads.box_predictor = FastRCNNPredictor(in_features, num_classes)
+
+    return model
 
 
 def make_standard_rpn_head(in_channels: int) -> Callable[[int], nn.Module]:
