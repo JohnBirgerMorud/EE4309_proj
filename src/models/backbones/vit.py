@@ -160,8 +160,25 @@ class Attention(nn.Module):
         # 5. Apply softmax to get attention weights
         # 6. Apply attention to values: Attention @ V
         # 7. Reshape and apply output projection
-        raise NotImplementedError("Attention.forward() not implemented")
-        # ==========================================================
+        
+        #Birger: 
+        B,H,W,C = x.shape
+        
+        qkv0 = self.qkv(x)
+        qkv1 = qkv0.reshape(B, H * W, 3, self.num_heads, C // self.num_heads)
+        qkv2 = qkv1.permute(2, 0, 3, 1, 4)
+        q, k, v = qkv2[0], qkv2[1], qkv2[2]
+
+        attn_scores = (q @ k.transpose(-2, -1)) * self.scale
+        attn_scores_w_pos_emb = add_decomposed_rel_pos(
+            attn_scores, q, self.rel_pos_h, self.rel_pos_w, 
+            q_size=(H, W), k_size=(H, W)
+)
+        attn_weigths = torch.softmax(attn_scores_w_pos_emb, -1)
+        
+        
+        out = attn_weigths @ v
+        return self.proj(out)
 
 
 def window_partition(x: torch.Tensor, window_size: int) -> Tuple[torch.Tensor, Tuple[int, int]]:
