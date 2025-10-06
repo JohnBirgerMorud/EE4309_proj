@@ -79,9 +79,12 @@ class PatchEmbed(nn.Module):
         # 1. Use self.proj (conv2d) to project patches to embedding dimension
         # 2. Permute from (B, C, H, W) to (B, H, W, C) format for transformer
         # This is the crucial first step of ViT that converts images to tokens
-        raise NotImplementedError("PatchEmbed.forward() not implemented")
-        # ===================================================
-
+        
+        #BIRGER: 
+        x_proj = self.proj(x)
+        return x.proj(0, 2, 3, 1)
+        
+        
 
 def get_rel_pos(q_size, k_size, rel_pos):
     """Get relative positional embeddings according to query/key shapes."""
