@@ -109,7 +109,7 @@ def build_faster_rcnn(
 
     model = FasterRCNN(
         backbone=backbone_module,
-        num_classes=None,
+        num_classes=num_classes,
         rpn_anchor_generator=anchor_generator,
         rpn_head=rpn_head,
         box_roi_pool=roi_pool,
