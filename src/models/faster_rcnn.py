@@ -111,7 +111,7 @@ def build_faster_rcnn(
         rpn_anchor_generator=anchor_generator,
         rpn_head=rpn_head,
         roi_pool=roi_pool,
-        config=config,
+        #config=config,
     )
 
 
