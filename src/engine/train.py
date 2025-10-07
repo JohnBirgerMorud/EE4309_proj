@@ -130,30 +130,20 @@ def main():
             
             # Birger: 
             optim.zero_grad()
-            from itertools import islice
-            
             images = [img.to(device) for img in images]
             targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
             
-            
-            print(images[0].device, next(model.parameters()).device)
 
-            with torch.cuda.amp.autocast(enabled=use_amp):
+            with autocast(enabled=use_amp):
               loss_dict = model(images, targets)
-              for key, value in dict(islice(loss_dict.items(), 5)):
-                print("key: ", key, " value: ", value)
-              
               tot_loss = sum(loss for loss in loss_dict.values())
     
-            if use_amp:
-                scaler.scale(tot_loss).backward()
-                scaler.step(optim)
-                scaler.update()
-            else:
-                tot_loss.backward()
-                optim.step()
-
+            scaler.scale(tot_loss).backward()
+            scaler.step(optim)
+            scaler.update()
+      
             loss_sum += tot_loss.item()
+            pbar.set_postfix(loss=f"{tot_loss.item():.4f}")
         
         sched.step()            
         #Given
