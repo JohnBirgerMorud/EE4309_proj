@@ -100,7 +100,7 @@ def build_faster_rcnn(
     # 5. Return the assembled model
     
     #Birger: 
-    if config == None:
+    if config is None:
       config = DetectorConfig()
     backbone_module = backbone.body
     rpn_head = rpn_head_factory(backbone_module.out_channels)
@@ -109,9 +109,9 @@ def build_faster_rcnn(
         backbone=backbone_module,
         num_classes=num_classes,
         rpn_anchor_generator=anchor_generator,
-        rpn_head=rpn_head,
+        rpn_head_factory=rpn_head,
         roi_pool=roi_pool,
-        #config=config,
+        **config.to_kwargs(),
     )
 
 
