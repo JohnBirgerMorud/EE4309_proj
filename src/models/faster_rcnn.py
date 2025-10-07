@@ -103,8 +103,6 @@ def build_faster_rcnn(
     if config == None:
       config = DetectorConfig()
     backbone_module = backbone.body
-    backbone_module.out_channels = backbone.out_channels
-
     rpn_head = rpn_head_factory(backbone_module.out_channels)
 
     model = FasterRCNN(

@@ -67,7 +67,7 @@ class Bottleneck(nn.Module):
         # Remember to handle the downsample path when stride > 1
         
         # Following the five steps
-        downsample = self.downsample | None
+        
         x_1 = self.relu(self.bn1(self.conv1(x)))
         x_2 = self.relu(self.bn2(self.conv2(x_1)))
         x_3 = self.bn3(self.conv3(x_2))
