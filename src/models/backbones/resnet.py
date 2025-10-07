@@ -49,6 +49,7 @@ class Bottleneck(nn.Module):
         self.bn3 = nn.BatchNorm2d(planes * self.expansion)
         self.relu = nn.ReLU(inplace=True)
 
+        self.downsample = None
         if stride > 1 or inplanes != planes * self.expansion:
             self.downsample = nn.Sequential(
                 conv1x1(inplanes, planes * self.expansion, stride),
@@ -66,10 +67,11 @@ class Bottleneck(nn.Module):
         # Remember to handle the downsample path when stride > 1
         
         # Following the five steps
+        downsample = self.downsample | None
         x_1 = self.relu(self.bn1(self.conv1(x)))
         x_2 = self.relu(self.bn2(self.conv2(x_1)))
-        x_3 = self.bn1(self.conv1(x_2))
-        if self.downsample():
+        x_3 = self.bn3(self.conv3(x_2))
+        if self.downsample != None:
           x_4 = self.downsample(x) + x_3
         else:
           x_4 = x + x_3
@@ -131,7 +133,7 @@ class ResNet(nn.Module):
         x_2 = self.layer4(self.layer3(self.layer2(self.layer1(x_1))))
         x_3 = torch.flatten(self.avgpool(x_2), 1)
         x_4 = self.fc(x_3)
-        return x_3
+        return x_4
 
 
 

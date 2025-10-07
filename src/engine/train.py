@@ -30,7 +30,7 @@ def get_args():
     ap.add_argument("--momentum", type=float, default=0.9)
     ap.add_argument("--num-workers", type=int, default=8)
     ap.add_argument("--seed", type=int, default=42)
-    ap.add_argument("--model", type=str, choices=AVAILABLE_MODELS, default="vit")
+    ap.add_argument("--model", type=str, choices=AVAILABLE_MODELS, default="resnet50")
     ap.add_argument("--output", type=str, default=None)
     ap.add_argument("--no-amp", action="store_true")
     ap.add_argument("--train-subset-size", type=int, default=None)
@@ -130,8 +130,19 @@ def main():
             
             # Birger: 
             optim.zero_grad()
+            from itertools import islice
+            
+            images = [img.to(device) for img in images]
+            targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
+            
+            
+            print(images[0].device, next(model.parameters()).device)
+
             with torch.cuda.amp.autocast(enabled=use_amp):
               loss_dict = model(images, targets)
+              for key, value in dict(islice(loss_dict.items(), 5)):
+                print("key: ", key, " value: ", value)
+              
               tot_loss = sum(loss for loss in loss_dict.values())
     
             if use_amp:
