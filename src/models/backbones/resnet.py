@@ -238,7 +238,8 @@ def build_resnet50_fpn_backbone(config: Optional[ResNetBackboneConfig] = None) -
 }
     #3
     k = RN.inplanes * Bottleneck.expansion
-    in_channels_list = [k, 2*k, 4*k, 8*k]
+    #in_channels_list = [k, 2*k, 4*k, 8*k]
+    in_channels_list = [256,512,1024,2048]
 
     #4
     return BackboneWithFPN(RN, return_layers, in_channels_list, config.out_channels)

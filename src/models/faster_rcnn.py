@@ -110,9 +110,10 @@ def build_faster_rcnn(
         num_classes=num_classes,
         rpn_anchor_generator=anchor_generator,
         rpn_head=rpn_head,
-        box_roi_pool=roi_pool,
-        **config.to_kwargs(),
+        roi_pool=roi_pool,
+        config=config,
     )
+
 
     in_features = model.roi_heads.box_predictor.cls_score.in_features
     model.roi_heads.box_predictor = FastRCNNPredictor(in_features, num_classes)
