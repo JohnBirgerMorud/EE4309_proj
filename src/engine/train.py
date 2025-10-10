@@ -9,7 +9,7 @@ from torch.optim.lr_scheduler import StepLR
 from torch.cuda.amp import autocast, GradScaler
 from tqdm import tqdm
 
-
+from torchmetrics.detection.mean_ap import MeanAveragePrecision as mAP
 
 from src.datasets.voc import VOCDataset, collate_fn
 from src.utils.transforms import Compose, ToTensor, RandomHorizontalFlip
@@ -163,7 +163,7 @@ def main():
         # Handle exceptions gracefully and set map50 = -1.0 if evaluation fails
         
         # Birger:
-        from torchmetrics import MeanAveragePrecision as mAP
+        
         model.eval()
         metric = mAP(iou_type='bbox')
         try:
