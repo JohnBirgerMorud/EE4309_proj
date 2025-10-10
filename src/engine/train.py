@@ -115,6 +115,7 @@ def main():
     best_map = -1.0
 
     for epoch in range(1, args.epochs + 1):
+        # model.load_state_dict(torch.load('/content/drive/MyDrive/checkpoints/model_epoch_10.pt'))
         model.train()
         pbar = tqdm(train_loader, ncols=100, desc=f"train[{epoch}/{args.epochs}]")
         loss_sum = 0.0
@@ -197,7 +198,7 @@ def main():
         if is_best:
             torch.save(ckpt, os.path.join(args.output, "best.pt"))
         print(f"[epoch {epoch}] avg_loss={avg_loss:.4f}  mAP@0.5={map50:.4f}  best={best_map:.4f}")
-
+        torch.save(model.state_dict(), '/content/drive/MyDrive/checkpoints/model_epoch_10.pt')
 
 if __name__ == "__main__":
     main()
