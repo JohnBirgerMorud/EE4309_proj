@@ -142,7 +142,7 @@ def main():
             scaler.scale(tot_loss).backward()
             scaler.step(optim)
             scaler.update()
-      
+
             loss_sum += tot_loss.item()
             pbar.set_postfix(loss=f"{tot_loss.item():.4f}")
         
@@ -177,6 +177,7 @@ def main():
 
           results = metric.compute()
           map50 = results['map_50']
+          print(map50)
           
         except Exception as e:
             print("Eval skipped due to:", e)

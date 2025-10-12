@@ -103,14 +103,15 @@ def build_faster_rcnn(
     if config is None:
       config = DetectorConfig()
     backbone_module = backbone.body
-    rpn_head = rpn_head_factory(backbone_module.out_channels)
+    num_rpn_head = anchor_generator.num_anchors_per_location()[0]
+    rpn_head = rpn_head_factory(num_rpn_head)
 
     model = FasterRCNN(
         backbone=backbone_module,
         num_classes=num_classes,
         rpn_anchor_generator=anchor_generator,
-        rpn_head_factory=rpn_head,
-        roi_pool=roi_pool,
+        rpn_head=rpn_head,
+        box_roi_pool=roi_pool,
         **config.to_kwargs(),
     )
 
