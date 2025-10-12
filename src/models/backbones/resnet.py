@@ -49,7 +49,6 @@ class Bottleneck(nn.Module):
         self.bn3 = nn.BatchNorm2d(planes * self.expansion)
         self.relu = nn.ReLU(inplace=True)
 
-        self.downsample = None
         if stride > 1 or inplanes != planes * self.expansion:
             self.downsample = nn.Sequential(
                 conv1x1(inplanes, planes * self.expansion, stride),
@@ -71,7 +70,7 @@ class Bottleneck(nn.Module):
         x_1 = self.relu(self.bn1(self.conv1(x)))
         x_2 = self.relu(self.bn2(self.conv2(x_1)))
         x_3 = self.bn3(self.conv3(x_2))
-        if self.downsample != None:
+        if hasattr(self, 'downsample'):
           x_4 = self.downsample(x) + x_3
         else:
           x_4 = x + x_3
@@ -166,9 +165,9 @@ class BackboneWithFPN(nn.Module):
         # This creates the feature pyramid needed for multi-scale detection
         
         #Birger: Folloes the backbone structure described above
-        x_1 = self.body(x)
-        x_2 = self.fpn(x_1)
-        return x_2
+        int_featrures = self.body(x)
+        features_pyramid = self.fpn(int_featrures)
+        return features_pyramid
 
 
 @dataclass
@@ -190,7 +189,7 @@ def _load_pretrained_weights(backbone: ResNet, config: ResNetBackboneConfig) -> 
     if config.weights_path:
         state_dict = torch.load(config.weights_path, map_location="cpu")
     elif config.weights:
-        try:
+        try:    
             state_dict = resnet50(weights=config.weights).state_dict()
         except Exception:
             state_dict = resnet50(weights=None).state_dict()
@@ -227,8 +226,9 @@ def build_resnet50_fpn_backbone(config: Optional[ResNetBackboneConfig] = None) -
     if config == None:
       config = ResNetBackboneConfig()
     RN = ResNet()
-    #_load_pretrained_weights(RN, config)
-    #_freeze_backbone_layers(RN)
+
+    _load_pretrained_weights(RN, config)
+    _freeze_backbone_layers(RN, config.trainable_layers)
     #2
     return_layers = {
     'layer1': '0',

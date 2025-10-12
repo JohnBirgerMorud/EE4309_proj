@@ -142,7 +142,7 @@ def main():
             scaler.scale(tot_loss).backward()
             scaler.step(optim)
             scaler.update()
-      
+            
             loss_sum += tot_loss.item()
             pbar.set_postfix(loss=f"{tot_loss.item():.4f}")
         
