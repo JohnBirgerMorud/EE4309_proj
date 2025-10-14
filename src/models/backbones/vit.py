@@ -164,11 +164,7 @@ class Attention(nn.Module):
         B, H, W, C = x.shape
         d_k = C // self.num_heads
         
-        print("B, H, W, C: ", x.shape)
-        print("d_k: ", d_k)
-
         qkv = self.qkv(x).reshape(B, H*W, 3, self.num_heads, d_k)
-        print(qkv.type)
         
         Q, K, V = qkv.unbind(2)
         Q = Q.permute(0, 2, 1, 3)

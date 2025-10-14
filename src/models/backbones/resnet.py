@@ -165,8 +165,8 @@ class BackboneWithFPN(nn.Module):
         # This creates the feature pyramid needed for multi-scale detection
         
         #Birger: Folloes the backbone structure described above
-        int_featrures = self.body(x)
-        features_pyramid = self.fpn(int_featrures)
+        intermediate_features = self.body(x)
+        features_pyramid = self.fpn(intermediate_features)
         return features_pyramid
 
 
@@ -225,7 +225,7 @@ def build_resnet50_fpn_backbone(config: Optional[ResNetBackboneConfig] = None) -
     #1
     if config == None:
       config = ResNetBackboneConfig()
-    RN = ResNet()
+    RN = ResNet((3, 4, 6, 3), 1000)
 
     _load_pretrained_weights(RN, config)
     _freeze_backbone_layers(RN, config.trainable_layers)

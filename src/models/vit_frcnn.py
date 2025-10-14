@@ -5,7 +5,11 @@ from typing import Optional
 from torchvision.models.detection.rpn import AnchorGenerator
 from torchvision.ops import MultiScaleRoIAlign
 
-from .backbones.vit import ViTBackboneConfig, build_vit_fpn_backbone
+#from .backbones.vit import ViTBackboneConfig, build_vit_fpn_backbone
+import sys
+import os
+from src.models.backbones.vit import ViTBackboneConfig, build_vit_fpn_backbone
+
 from .detection_config import (
     DEFAULT_ANCHOR_SIZES,
     DEFAULT_ASPECT_RATIOS,
@@ -55,11 +59,8 @@ def get_vit_fasterrcnn_model(
     out_channels = fpn_backbone.out_channels
     wrapped_backbone = BackboneBundle(fpn_backbone, feature_names, out_channels)
 
-
-    anchor_generator = AnchorGenerator(
-            sizes=((32, 64, 128, 256, 512),),
-            aspect_ratios=((0.5, 1.0, 2.0),)
-        )
+    
+    anchor_generator = AnchorGenerator(DEFAULT_ANCHOR_SIZES, DEFAULT_ASPECT_RATIOS)
     rpn_head_factory = make_standard_rpn_head
     roi_pool = MultiScaleRoIAlign(feature_names, output_size=7, sampling_ratio=2)
     detector_config = DetectorConfig(box_score_thresh,
@@ -83,3 +84,6 @@ def get_vit_fasterrcnn_model(
 
     
     # ================================================================
+
+
+get_vit_fasterrcnn_model(10)

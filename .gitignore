@@ -158,7 +158,4 @@ inference_results/
 .sample_data
 .sample_data/
 sample_data/
-
-
-# Birger test file:
 src/models/backbones/test.py
