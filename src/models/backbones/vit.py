@@ -81,9 +81,9 @@ class PatchEmbed(nn.Module):
         # This is the crucial first step of ViT that converts images to tokens
         
         #BIRGER: 
-        x_proj = self.proj(x)
-        return x.proj(0, 2, 3, 1)
-        
+        x = self.proj(x)
+        x = x.permute(0, 2, 3, 1).contiguous()
+        return x
         
 
 def get_rel_pos(q_size, k_size, rel_pos):
@@ -160,7 +160,21 @@ class Attention(nn.Module):
         # 5. Apply softmax to get attention weights
         # 6. Apply attention to values: Attention @ V
         # 7. Reshape and apply output projection
-        raise NotImplementedError("Attention.forward() not implemented")
+        
+        B, H, W, C = x.shape
+        d_k = C // self.num_heads
+        
+        qkv = self.qkv(x).reshape(B, H*W, 3, self.num_heads, d_k)
+        Q, K, V = qkv.unbind(2)
+
+        attn_scores = (Q @ torch.transpose(K, 0, 1)) / torch.sqrt(d_k)
+        attn_scores += add_decomposed_rel_pos(attn_scores, Q, self.rel_pos_h, self.rel_pos_w, Q.shape, K.shape)
+        attn_weigths = torch.softmax(attn_scores, dim=-1)
+        out = (attn_weigths @ V).transpose(1,2).reshape(B,H,W,C)
+        self.proj(out)
+        return out
+
+
         # ==========================================================
 
 
