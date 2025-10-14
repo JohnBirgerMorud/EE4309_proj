@@ -266,7 +266,25 @@ class Block(nn.Module):
         # 4. Apply second layer norm and MLP
         # 5. Add second skip connection with dropout path
         # Remember to handle window partitioning when window_size > 0
-        raise NotImplementedError("Block.forward() not implemented")
+        
+        B,H,W,C = x.shape
+        x1 = x
+        if self.window_size > 0:
+            windows, (Hp, Wp) = window_partition(x1, self.window_size)
+            x2 = self.norm1(windows)
+            x2 = self.attn(x2)
+            x2 = window_unpartition(x2, self.window_size, (Hp, Wp), (H,W))
+        else:
+            x2 = self.norm1(x1)
+            x2 = self.attn(x1)
+        
+        x3 = x1 + self.drop_path(x2)
+
+        x4 = self.norm2(x3)
+        x4 = self.mlp(x4)
+
+        x5 = x3 + self.drop_path(x4)
+        return x5
         # ==========================================================
 
 
