@@ -298,7 +298,28 @@ def get_abs_pos(abs_pos: torch.Tensor, hw: Tuple[int, int], has_cls_token: bool 
     # 4. If size mismatch, use F.interpolate to resize embeddings
     # 5. Return reshaped positional embeddings in (1, H, W, C) format
     # This allows ViT to handle different input sizes than pretraining
-    raise NotImplementedError("get_abs_pos() not implemented")
+    
+    H,W = hw
+    if has_cls_token:
+        class_token = abs_pos[:, 0, :]
+        abs_pos = abs_pos[:, 1:, :]
+    _, N,C = abs_pos.shape
+
+    orig_H = orig_W = int(N ** 0.5) # Square grid ??
+
+    if (H,W) != (orig_H, orig_W):
+        abs_pos = abs_pos.transpose(1, 2).reshape(1, abs_pos.shape[2], orig_H, orig_W)
+        abs_pos = F.interpolate(abs_pos, size=(H, W), mode='bicubic', align_corners=False)
+        abs_pos = abs_pos.reshape(1, abs_pos.shape[1], H*W).transpose(1, 2)
+
+    if has_cls_token:
+        abs_pos = torch.cat([class_token, abs_pos], dim=1)
+    else:
+        abs_pos = abs_pos
+
+    abs_pos = abs_pos.reshape(1, H, W, abs_pos.shape[2])
+    return abs_pos
+    
     # ==============================================================
 
 
@@ -383,11 +404,26 @@ class ViT(nn.Module):
         # ===== STUDENT TODO: Implement ViT forward pass =====
         # Hint: Follow the Vision Transformer pipeline:
         # 1. Apply patch embedding to convert image to patches
-        # 2. Get and add positional embeddings using get_abs_pos
+        # 2. Get and add positional embeddings using get_abs_pos 
         # 3. Pass through all transformer blocks sequentially
         # 4. Return output in the expected format (permute to BCHW)
         # Note: Output should be a dict with the feature name as key
-        raise NotImplementedError("ViT.forward() not implemented")
+        
+        B,C,H,W = x.shape
+        x1 = x
+        x1 = self.patch_embed(x1)
+        H_p, W_p = x1.shape[1:3]
+        
+        pos_embed = get_abs_pos(self.pos_embed, (H_p, W_p), has_cls_token=False)
+        x2 = x1 + pos_embed
+        
+        for blk in self.blocks:
+            x2 = blk(x2)
+
+        x3 = torch.permute(x2, (0, 3, 1, 2)).contiguous()
+        return {self._out_features[0]: x3}
+
+
         # ========================================================
 
     def output_shape(self) -> dict[str, ShapeSpec]:
