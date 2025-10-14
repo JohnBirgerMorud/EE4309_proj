@@ -164,11 +164,31 @@ class Attention(nn.Module):
         B, H, W, C = x.shape
         d_k = C // self.num_heads
         
-        qkv = self.qkv(x).reshape(B, H*W, 3, self.num_heads, d_k)
-        Q, K, V = qkv.unbind(2)
+        print("B, H, W, C: ", x.shape)
+        print("d_k: ", d_k)
 
-        attn_scores = (Q @ torch.transpose(K, 0, 1)) / torch.sqrt(d_k)
-        attn_scores += add_decomposed_rel_pos(attn_scores, Q, self.rel_pos_h, self.rel_pos_w, Q.shape, K.shape)
+        qkv = self.qkv(x).reshape(B, H*W, 3, self.num_heads, d_k)
+        print(qkv.type)
+        
+        Q, K, V = qkv.unbind(2)
+        Q = Q.permute(0, 2, 1, 3)
+        K = K.permute(0, 2, 1, 3)
+        V = V.permute(0, 2, 1, 3)
+
+
+        attn_scores = (Q @ torch.transpose(K, -1, -2)) / math.sqrt(d_k)
+        B, HN, N, _ = attn_scores.shape
+        Q_for_rel = Q.permute(0, 2, 1, 3).reshape(B*self.num_heads, H, W, d_k)
+
+
+        #attn_scores += add_decomposed_rel_pos(attn_scores, Q_for_rel, self.rel_pos_h, self.rel_pos_w, (H,W), (H,W))
+        for h in range(self.num_heads):
+            Q_head = Q[:, h, :, :]  # shape (B, N, d_k)
+            attn_scores[:, h, :, :] += add_decomposed_rel_pos(
+                attn_scores[:, h, :, :], Q_head, self.rel_pos_h, self.rel_pos_w, (H, W), (H, W)
+            )
+
+        
         attn_weigths = torch.softmax(attn_scores, dim=-1)
         out = (attn_weigths @ V).transpose(1,2).reshape(B,H,W,C)
         self.proj(out)
