@@ -561,7 +561,22 @@ class SimpleFeaturePyramid(nn.Module):
         # 4. Handle top_block if present for additional pyramid levels
         # 5. Return dictionary mapping feature names to tensors
         # This creates the multi-scale features needed for detection
-        raise NotImplementedError("SimpleFeaturePyramid.forward() not implemented")
+        
+        bottom_up_features = self.net(x)
+        main_features = bottom_up_features[self.in_feature]
+        features = {}
+        for idx, stages in enumerate(self.stages):
+            features[self._out_features[idx]] = stages(main_features)
+
+        if self.top_block is not None:
+            last_feature = features[self._out_features[len(self.stages)-1]]
+            top_features = self.top_block(last_feature)
+            for i, f in enumerate(top_features):
+                features[f"p{len(self.stages)+i+1}"] = f
+
+
+        return features
+
         # ============================================================
 
 
