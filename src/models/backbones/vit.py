@@ -565,11 +565,13 @@ class SimpleFeaturePyramid(nn.Module):
             features[self._out_features[idx]] = stages(main_features)
 
         if self.top_block is not None:
-            last_feature = features[self._out_features[len(self.stages)-1]]
-            top_features = self.top_block(last_feature)
+            last_feature = features[self._out_features[len(self.stages)-1]]  # p5
+            top_features = self.top_block(last_feature)  # should return a list with 1 tensor
             for i, f in enumerate(top_features):
-                features[f"p{len(self.stages)+i+1}"] = f
-
+                features[f"p{len(self.stages)+i+2}"] = f
+        else:
+            # fallback: manually downsample p5 to create p6 if top_block is None
+            features['p6'] = F.max_pool2d(features['p5'], kernel_size=1, stride=2)
 
         return features
 

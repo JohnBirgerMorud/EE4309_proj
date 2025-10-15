@@ -5,10 +5,8 @@ from typing import Optional
 from torchvision.models.detection.rpn import AnchorGenerator
 from torchvision.ops import MultiScaleRoIAlign
 
-#from .backbones.vit import ViTBackboneConfig, build_vit_fpn_backbone
-import sys
-import os
-from src.models.backbones.vit import ViTBackboneConfig, build_vit_fpn_backbone
+from .backbones.vit import ViTBackboneConfig, build_vit_fpn_backbone
+
 
 from .detection_config import (
     DEFAULT_ANCHOR_SIZES,
@@ -58,32 +56,33 @@ def get_vit_fasterrcnn_model(
     feature_names = fpn_backbone._out_features
     out_channels = fpn_backbone.out_channels
     wrapped_backbone = BackboneBundle(fpn_backbone, feature_names, out_channels)
-
     
     anchor_generator = AnchorGenerator(DEFAULT_ANCHOR_SIZES, DEFAULT_ASPECT_RATIOS)
-    rpn_head_factory = make_standard_rpn_head
+    rpn_head_factory = make_standard_rpn_head(out_channels)
     roi_pool = MultiScaleRoIAlign(feature_names, output_size=7, sampling_ratio=2)
-    detector_config = DetectorConfig(box_score_thresh,
-                                        box_nms_thresh,
-                                        detections_per_img,
-                                        rpn_pre_nms_top_n_train,
-                                        rpn_pre_nms_top_n_test,
-                                        rpn_post_nms_top_n_train,
-                                        rpn_post_nms_top_n_test,
-                                        rpn_nms_thresh,
-                                        rpn_score_thresh)
 
-    detector = build_faster_rcnn(backbone=wrapped_backbone, 
-                                 anchor_generator=anchor_generator, 
-                                 rpn_head_factory=rpn_head_factory, 
-                                 roi_pool=roi_pool, 
-                                 num_classes=num_classes, 
-                                 config=detector_config)
+    detector_config = DetectorConfig(
+        box_score_thresh=box_score_thresh,
+        box_nms_thresh=box_nms_thresh,
+        detections_per_img=detections_per_img,
+        rpn_pre_nms_top_n_train=rpn_pre_nms_top_n_train,
+        rpn_pre_nms_top_n_test=rpn_pre_nms_top_n_test,
+        rpn_post_nms_top_n_train=rpn_post_nms_top_n_train,
+        rpn_post_nms_top_n_test=rpn_post_nms_top_n_test,
+        rpn_nms_thresh=rpn_nms_thresh,
+        rpn_score_thresh=rpn_score_thresh
+    )
+
+    detector = build_faster_rcnn(
+        backbone=wrapped_backbone,
+        anchor_generator=anchor_generator,
+        rpn_head_factory=rpn_head_factory,
+        roi_pool=roi_pool,
+        num_classes=num_classes,
+        config=detector_config
+    )
 
     return detector
 
     
     # ================================================================
-
-
-get_vit_fasterrcnn_model(10)

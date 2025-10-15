@@ -198,7 +198,6 @@ def main():
         if is_best:
             torch.save(ckpt, os.path.join(args.output, "best.pt"))
         print(f"[epoch {epoch}] avg_loss={avg_loss:.4f}  mAP@0.5={map50:.4f}  best={best_map:.4f}")
-        torch.save(model.state_dict(), '/content/drive/MyDrive/checkpoints/model_epoch_10.pt')
 
 if __name__ == "__main__":
     main()
