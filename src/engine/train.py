@@ -114,8 +114,12 @@ def main():
     out_dir.mkdir(parents=True, exist_ok=True)
     best_map = -1.0
 
+    file_path = '/content/drive/MyDrive/checkpoints/model_epoch_10.pt'
     for epoch in range(1, args.epochs + 1):
-        # model.load_state_dict(torch.load('/content/drive/MyDrive/checkpoints/model_epoch_10.pt'))
+        if os.path.exists(file_path) and os.path.getsize(file_path) == 0:
+            print("Files emtpy\n")
+        else:
+            model.load_state_dict(torch.load(file_path))
         model.train()
         pbar = tqdm(train_loader, ncols=100, desc=f"train[{epoch}/{args.epochs}]")
         loss_sum = 0.0
@@ -167,7 +171,7 @@ def main():
         metric = mAP(iou_type='bbox')
         try:
           with torch.no_grad():
-            for images, targets in val_loader:
+            for images, targets in train_loader:
               images = [img.to(device) for img in images]
               targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
               outputs = model(images)  
@@ -176,7 +180,6 @@ def main():
 
           results = metric.compute()
           map50 = results['map_50']
-          print(map50)
           
         except Exception as e:
             print("Eval skipped due to:", e)
@@ -198,6 +201,7 @@ def main():
         if is_best:
             torch.save(ckpt, os.path.join(args.output, "best.pt"))
         print(f"[epoch {epoch}] avg_loss={avg_loss:.4f}  mAP@0.5={map50:.4f}  best={best_map:.4f}")
+        torch.save(model.state_dict(), '/content/drive/MyDrive/checkpoints/model_epoch_10.pt')
 
 if __name__ == "__main__":
     main()
