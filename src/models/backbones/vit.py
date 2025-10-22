@@ -272,7 +272,7 @@ class Block(nn.Module):
             x2 = window_unpartition(x2, self.window_size, (Hp, Wp), (H,W))
         else:
             x2 = self.norm1(x1)
-            x2 = self.attn(x1)
+            x2 = self.attn(x2)
         
         x3 = x1 + self.drop_path(x2)
 
