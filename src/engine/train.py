@@ -114,7 +114,7 @@ def main():
     out_dir.mkdir(parents=True, exist_ok=True)
     best_map = -1.0
 
-    file_path = '/content/drive/MyDrive/checkpoints/resnet_tor1515.pt'
+    file_path = '/content/drive/MyDrive/checkpoints/resnet_pretrained_tor1830.pt'
     for epoch in range(1, args.epochs + 1):
         if os.path.exists(file_path) and os.path.getsize(file_path) == 0:
             print("Files emtpy\n")
