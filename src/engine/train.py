@@ -115,11 +115,23 @@ def main():
     best_map = -1.0
 
     file_path = '/content/drive/MyDrive/checkpoints/resnet_pretrained_tor1830.pt'
-    for epoch in range(1, args.epochs + 1):
-        if os.path.exists(file_path) and os.path.getsize(file_path) == 0:
+    data_file_path = '/content/drive/MyDrive/checkpoints/data.pt'
+    if os.path.exists(data_file_path) and os.path.getsize(data_file_path) == 0:
+        data = {
+            'avg_training_loss': [],
+            'map_on_validation': [],
+            'epoch_number' : 1
+            }
+    else: 
+        data = torch.load(data_file_path)
+    
+    if os.path.exists(file_path) and os.path.getsize(file_path) == 0:
             print("Files emtpy\n")
-        else:
-            model.load_state_dict(torch.load(file_path))
+    else:
+        model.load_state_dict(torch.load(file_path))
+
+    start_epoch = data['epoch_number']
+    for epoch in range(start_epoch, args.epochs + 1):
         model.train()
         pbar = tqdm(train_loader, ncols=100, desc=f"train[{epoch}/{args.epochs}]")
         loss_sum = 0.0
@@ -145,7 +157,7 @@ def main():
             scaler.update()
             loss_sum += tot_loss.item()
             pbar.set_postfix(loss=f"{tot_loss.item():.4f}")
-            
+
         # ===================================================
         sched.step()            
         avg_loss = loss_sum / len(train_loader)
@@ -182,6 +194,10 @@ def main():
         is_best = map50 > best_map
         best_map = max(best_map, map50)
 
+        data['avg_training_loss'].append(avg_loss)
+        data['map_on_validation'].append(map50)
+        data['epoch_number'] = epoch + 1
+
         ckpt = {
             "epoch": epoch,
             "model": model.state_dict(),
@@ -195,6 +211,7 @@ def main():
             torch.save(ckpt, os.path.join(args.output, "best.pt"))
         print(f"[epoch {epoch}] avg_loss={avg_loss:.4f}  mAP@0.5={map50:.4f}  best={best_map:.4f}")
         torch.save(model.state_dict(), file_path)
+        torch.save(data, data_file_path)
 
 if __name__ == "__main__":
     main()
