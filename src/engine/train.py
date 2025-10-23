@@ -115,7 +115,7 @@ def main():
     best_map = -1.0
 
     file_path = '/content/drive/MyDrive/checkpoints/resnet_pretrained_tor1830.pt'
-    data_file_path = '/content/drive/MyDrive/checkpoints/data.pt'
+    data_file_path = '/content/drive/MyDrive/checkpoints/data.txt'
     if os.path.exists(data_file_path) and os.path.getsize(data_file_path) == 0:
         data = {
             'avg_training_loss': [],
