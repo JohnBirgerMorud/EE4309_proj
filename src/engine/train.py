@@ -114,8 +114,12 @@ def main():
     out_dir.mkdir(parents=True, exist_ok=True)
     best_map = -1.0
 
+    file_path = '/content/drive/MyDrive/checkpoints/model_epoch_10.pt'
     for epoch in range(1, args.epochs + 1):
-        # model.load_state_dict(torch.load('/content/drive/MyDrive/checkpoints/model_epoch_10.pt'))
+        if os.path.exists(file_path) and os.path.getsize(file_path) == 0:
+            print("Files emtpy\n")
+        else:
+            model.load_state_dict(torch.load(file_path))
         model.train()
         pbar = tqdm(train_loader, ncols=100, desc=f"train[{epoch}/{args.epochs}]")
         loss_sum = 0.0
@@ -142,7 +146,6 @@ def main():
             scaler.scale(tot_loss).backward()
             scaler.step(optim)
             scaler.update()
-
             loss_sum += tot_loss.item()
             pbar.set_postfix(loss=f"{tot_loss.item():.4f}")
         
@@ -177,7 +180,6 @@ def main():
 
           results = metric.compute()
           map50 = results['map_50']
-          print(map50)
           
         except Exception as e:
             print("Eval skipped due to:", e)
