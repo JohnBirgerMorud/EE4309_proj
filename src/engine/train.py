@@ -114,7 +114,7 @@ def main():
     out_dir.mkdir(parents=True, exist_ok=True)
     best_map = -1.0
 
-    file_path = '/content/drive/MyDrive/checkpoints/model_epoch_10.pt'
+    file_path = '/content/drive/MyDrive/checkpoints/resnet.pt'
     for epoch in range(1, args.epochs + 1):
         if os.path.exists(file_path) and os.path.getsize(file_path) == 0:
             print("Files emtpy\n")
@@ -201,7 +201,7 @@ def main():
         if is_best:
             torch.save(ckpt, os.path.join(args.output, "best.pt"))
         print(f"[epoch {epoch}] avg_loss={avg_loss:.4f}  mAP@0.5={map50:.4f}  best={best_map:.4f}")
-        torch.save(model.state_dict(), '/content/drive/MyDrive/checkpoints/model_epoch_10.pt')
+        torch.save(model.state_dict(), file_path)
 
 if __name__ == "__main__":
     main()
