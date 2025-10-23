@@ -98,8 +98,7 @@ def build_faster_rcnn(
     #    - config parameters for detection thresholds
     # 4. Replace the box predictor head for the correct number of classes
     # 5. Return the assembled model
-    
-    #Birger: 
+
     if config is None:
       config = DetectorConfig()
     backbone_module = backbone.body
@@ -114,8 +113,6 @@ def build_faster_rcnn(
         box_roi_pool=roi_pool,
         **config.to_kwargs(),
     )
-
-
     in_features = model.roi_heads.box_predictor.cls_score.in_features
     model.roi_heads.box_predictor = FastRCNNPredictor(in_features, num_classes)
 

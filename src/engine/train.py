@@ -132,25 +132,22 @@ def main():
             # 3. Sum all losses from the loss dictionary
             # 4. Backward pass: scale losses, compute gradients, step optimizer
             # 5. Update scaler for mixed precision training
-            
-            # Birger: 
+
             optim.zero_grad()
             images = [img.to(device) for img in images]
             targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
             
-
             with autocast(enabled=use_amp):
               loss_dict = model(images, targets)
               tot_loss = sum(loss for loss in loss_dict.values())
-    
             scaler.scale(tot_loss).backward()
             scaler.step(optim)
             scaler.update()
             loss_sum += tot_loss.item()
             pbar.set_postfix(loss=f"{tot_loss.item():.4f}")
-        
+            
+        # ===================================================
         sched.step()            
-        #Given
         avg_loss = loss_sum / len(train_loader)
         save_jsonl([{"epoch": epoch, "loss": avg_loss}], os.path.join(args.output, "logs.jsonl"))
 
@@ -165,8 +162,6 @@ def main():
         # 4. Compute final mAP and extract the "map" value
         # Handle exceptions gracefully and set map50 = -1.0 if evaluation fails
         
-        # Birger:
-        
         model.eval()
         metric = mAP(iou_type='bbox')
         try:
@@ -175,9 +170,7 @@ def main():
               images = [img.to(device) for img in images]
               targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
               outputs = model(images)  
-
               metric.update(outputs, targets)
-
           results = metric.compute()
           map50 = results['map_50']
           

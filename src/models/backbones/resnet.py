@@ -64,18 +64,25 @@ class Bottleneck(nn.Module):
         # 4. Add skip connection (identity or downsample if needed)
         # 5. Apply final ReLU activation
         # Remember to handle the downsample path when stride > 1
+
+        identity = x
+        x = self.conv1(x)
+        x = self.bn1(x)
+        x = self.relu(x)
+                
+        x = self.conv2(x)
+        x = self.bn2(x)
+        x = self.relu(x)
+
+        x = self.conv3(x)
+        x = self.bn3(x)
         
-        # Following the five steps
-        
-        x_1 = self.relu(self.bn1(self.conv1(x)))
-        x_2 = self.relu(self.bn2(self.conv2(x_1)))
-        x_3 = self.bn3(self.conv3(x_2))
         if hasattr(self, 'downsample'):
-          x_4 = self.downsample(x) + x_3
+          x = self.downsample(x) + identity
         else:
-          x_4 = x + x_3
-        x_5 = self.relu(x_4)
-        return x_5
+          x = x + identity
+        x = self.relu(x)
+        return x
 
 
 
@@ -126,13 +133,22 @@ class ResNet(nn.Module):
         # 3. Apply global average pooling and flatten
         # 4. Apply final fully connected layer
         # This should match the torchvision ResNet-50 structure
+
+        x = self.conv1(x)
+        x = self.bn1(x)
+        x = self.relu(x)
+        x = self.maxpool(x)
+
+        x = self.layer1(x)
+        x = self.layer2(x)
+        x = self.layer3(x)
+        x = self.layer4(x)
         
-        # Birger: Follow the standard ResNet-50 architecture as described above
-        x_1 = self.maxpool(self.relu(self.bn1(self.conv1(x))))
-        x_2 = self.layer4(self.layer3(self.layer2(self.layer1(x_1))))
-        x_3 = torch.flatten(self.avgpool(x_2), 1)
-        x_4 = self.fc(x_3)
-        return x_4
+        x = self.avgpool(x)
+        x = torch.flatten(x, 1)
+
+        x = self.fc(x)
+        return x
 
 
 
@@ -163,8 +179,7 @@ class BackboneWithFPN(nn.Module):
         # 2. Pass features through FPN (self.fpn) to create feature pyramid
         # 3. Return the FPN output (OrderedDict of multi-scale features)
         # This creates the feature pyramid needed for multi-scale detection
-        
-        #Birger: Folloes the backbone structure described above
+
         intermediate_features = self.body(x)
         features_pyramid = self.fpn(intermediate_features)
         return features_pyramid
@@ -220,32 +235,26 @@ def build_resnet50_fpn_backbone(config: Optional[ResNetBackboneConfig] = None) -
     #    (hint: use backbone.fc.in_features to determine channel progression)
     # 4. Create and return BackboneWithFPN with all components
     # This integrates ResNet feature extraction with FPN multi-scale features
-    
-    #Birger: Implement structure as described above
-    #1
-    if config == None:
-      config = ResNetBackboneConfig()
 
+    RN = ResNet((3, 4, 6, 3), 1000)
+    
+    if config is None:
+      config = ResNetBackboneConfig()
     config.pretrained = True
     config.weights = "IMAGENET1K_V1"
-    
-    RN = ResNet((3, 4, 6, 3), 1000)
 
     _load_pretrained_weights(RN, config)
     _freeze_backbone_layers(RN, config.trainable_layers)
-    #2
+    
     return_layers = {
     'layer1': '0',
     'layer2': '1',
     'layer3': '2',
     'layer4': '3',
-}
-    #3
-    #k = RN.inplanes * Bottleneck.expansion
-    #in_channels_list = [k, 2*k, 4*k, 8*k]
-    in_channels_list = [256,512,1024,2048]
-
-    #4
+    }
+    k = RN.inplanes * Bottleneck.expansion
+    in_channels_list = [k, 2*k, 4*k, 8*k]
+    
     return BackboneWithFPN(RN, return_layers, in_channels_list, config.out_channels)
 
 
