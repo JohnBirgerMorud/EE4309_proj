@@ -69,7 +69,7 @@ class Bottleneck(nn.Module):
         x = self.conv1(x)
         x = self.bn1(x)
         x = self.relu(x)
-                
+
         x = self.conv2(x)
         x = self.bn2(x)
         x = self.relu(x)
@@ -78,7 +78,7 @@ class Bottleneck(nn.Module):
         x = self.bn3(x)
         
         if hasattr(self, 'downsample'):
-          x = self.downsample(x) + identity
+          x = self.downsample(identity) + x
         else:
           x = x + identity
         x = self.relu(x)
