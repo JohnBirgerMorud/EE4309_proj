@@ -628,16 +628,6 @@ def build_vit_backbone(config: Optional[ViTBackboneConfig] = None) -> ViT:
         for param in vit.patch_embed.parameters():
             param.requires_grad = False
 
-    ## Load pretrained weigths
-    from torchvision.models import vit_b_16, ViT_B_16_Weights
-    pretrain = True
-    if pretrain:
-        print("Pretraining ViT")
-        pretrained_vit = vit_b_16(weights=ViT_B_16_Weights.IMAGENET1K_V1)
-        missing, unexpected = vit.load_state_dict(pretrained_vit.state_dict(), strict=False)
-        print("Loaded pretrained ViT. Missing:", missing, "Unexpected:", unexpected)
-
-
     _freeze_vit_layers(vit, config.frozen_stages)
     return vit
 
