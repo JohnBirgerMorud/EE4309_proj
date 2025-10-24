@@ -114,8 +114,8 @@ def main():
     out_dir.mkdir(parents=True, exist_ok=True)
     best_map = -1.0
 
-    experiment = 'without_0005_4'
-    file_path = f'/content/drive/MyDrive/checkpoints/resnet_{experiment}.pt'
+    experiment = 'vit_without_001_4'
+    file_path = f'/content/drive/MyDrive/checkpoints/{experiment}.pt'
     data_file_path = f'/content/drive/MyDrive/checkpoints/data_{experiment}.txt'
     if not os.path.exists(data_file_path) or os.path.getsize(data_file_path) == 0:
         data = {
