@@ -174,7 +174,6 @@ class Attention(nn.Module):
         attn_scores = (Q @ torch.transpose(K, -1, -2)) / math.sqrt(d_k)
         B, HN, N, _ = attn_scores.shape
 
-
         for h in range(self.num_heads):
             Q_head = Q[:, h, :, :]
             attn_scores[:, h, :, :] += add_decomposed_rel_pos(
@@ -568,7 +567,7 @@ class SimpleFeaturePyramid(nn.Module):
             last_feature = features[self._out_features[len(self.stages) - 1]]
             top_features = self.top_block(last_feature)
             for i, f in enumerate(top_features):
-                features[f"p{len(self.stages)+i+2}"] = f
+                features[f"p{len(self.stages) + i + 2}"] = f
         else:
             features["p6"] = F.max_pool2d(features["p5"], kernel_size=1, stride=2)
 

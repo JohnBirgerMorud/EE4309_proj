@@ -85,7 +85,6 @@ class Bottleneck(nn.Module):
         return x
 
 
-
 def _make_block(inplanes: int, planes: int, blocks: int, stride: int = 1) -> nn.Sequential:
     layers: List[nn.Module] = [Bottleneck(inplanes, planes, stride)]
     outplanes = planes * Bottleneck.expansion
@@ -237,26 +236,25 @@ def build_resnet50_fpn_backbone(config: Optional[ResNetBackboneConfig] = None) -
     # This integrates ResNet feature extraction with FPN multi-scale features
 
     RN = ResNet((3, 4, 6, 3), 1000)
-    
+
     if config is None:
-      config = ResNetBackboneConfig()
-    # config.pretrained = True
-    # config.weights = "IMAGENET1K_V1"
+        config = ResNetBackboneConfig()
+    config.pretrained = True
+    config.weights = "IMAGENET1K_V1"
 
     _load_pretrained_weights(RN, config)
     _freeze_backbone_layers(RN, config.trainable_layers)
-    
+
     return_layers = {
-    'layer1': '0',
-    'layer2': '1',
-    'layer3': '2',
-    'layer4': '3',
+        'layer1': '0',
+        'layer2': '1',
+        'layer3': '2',
+        'layer4': '3',
     }
     k = RN.inplanes * Bottleneck.expansion
     in_channels_list = [k, 2*k, 4*k, 8*k]
-    
-    return BackboneWithFPN(RN, return_layers, in_channels_list, config.out_channels)
 
+    return BackboneWithFPN(RN, return_layers, in_channels_list, config.out_channels)
 
 
 RESNET_FPN_FEATMAP_NAMES = ("0", "1", "2", "3")
