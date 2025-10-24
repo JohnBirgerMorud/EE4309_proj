@@ -124,7 +124,7 @@ def main():
             }
     else: 
         data = torch.load(data_file_path)
-    
+     
     if os.path.exists(file_path) and os.path.getsize(file_path) == 0:
             print("Files emtpy\n")
     else:
