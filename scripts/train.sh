@@ -26,10 +26,10 @@ python3 -m src.engine.train \
   --val-set trainval \
   --epochs "$EPOCHS" \
   --batch-size "$BATCH_SIZE" \
-  --lr 0.002 \
+  --lr "$LR" \
   --weight-decay 1e-4 \
   --momentum 0.9 \
-  --num-workers 4 \
+  --num-workers {$N_WORKERS} \
   --output "$OUTPUT" \
   --model "$MODEL" \
   --seed 42 \
