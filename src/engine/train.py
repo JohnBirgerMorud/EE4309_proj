@@ -122,11 +122,13 @@ def main():
             'map_on_validation': [],
             'epoch_number' : 1
             }
+        torch.save(data, data_file_path)
     else: 
         data = torch.load(data_file_path)
      
     if os.path.exists(file_path) and os.path.getsize(file_path) == 0:
-            print("Files emtpy\n")
+        print("Files emtpy\n")
+        torch.save(model.state_dict(), file_path)
     else:
         model.load_state_dict(torch.load(file_path))
 
