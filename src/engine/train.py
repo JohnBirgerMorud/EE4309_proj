@@ -117,7 +117,7 @@ def main():
     experiment = 'without_0005_4'
     file_path = f'/content/drive/MyDrive/checkpoints/resnet_{experiment}.pt'
     data_file_path = f'/content/drive/MyDrive/checkpoints/data_{experiment}.txt'
-    if os.path.exists(data_file_path) and os.path.getsize(data_file_path) == 0:
+    if not os.path.exists(data_file_path) or os.path.getsize(data_file_path) == 0:
         data = {
             'avg_training_loss': [],
             'map_on_validation': [],
@@ -127,7 +127,7 @@ def main():
     else: 
         data = torch.load(data_file_path)
      
-    if os.path.exists(file_path) and os.path.getsize(file_path) == 0:
+    if not os.path.exists(file_path) or os.path.getsize(file_path) == 0:
         print("Files emtpy\n")
         torch.save(model.state_dict(), file_path)
     else:
