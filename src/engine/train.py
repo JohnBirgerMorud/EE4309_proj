@@ -114,12 +114,27 @@ def main():
     out_dir.mkdir(parents=True, exist_ok=True)
     best_map = -1.0
 
-    file_path = '/content/drive/MyDrive/checkpoints/model_epoch_10.pt'
-    for epoch in range(1, args.epochs + 1):
-        if os.path.exists(file_path) and os.path.getsize(file_path) == 0:
-            print("Files emtpy\n")
-        else:
-            model.load_state_dict(torch.load(file_path))
+    experiment = 'without_0005_4'
+    file_path = f'/content/drive/MyDrive/checkpoints/resnet_{experiment}.pt'
+    data_file_path = f'/content/drive/MyDrive/checkpoints/data_{experiment}.txt'
+    if not os.path.exists(data_file_path) or os.path.getsize(data_file_path) == 0:
+        data = {
+            'avg_training_loss': [],
+            'map_on_validation': [],
+            'epoch_number' : 1
+            }
+        torch.save(data, data_file_path)
+    else: 
+        data = torch.load(data_file_path)
+     
+    if not os.path.exists(file_path) or os.path.getsize(file_path) == 0:
+        print("Files emtpy\n")
+        torch.save(model.state_dict(), file_path)
+    else:
+        model.load_state_dict(torch.load(file_path))
+
+    start_epoch = data['epoch_number']
+    for epoch in range(start_epoch, args.epochs + 1):
         model.train()
         pbar = tqdm(train_loader, ncols=100, desc=f"train[{epoch}/{args.epochs}]")
         loss_sum = 0.0
@@ -132,25 +147,22 @@ def main():
             # 3. Sum all losses from the loss dictionary
             # 4. Backward pass: scale losses, compute gradients, step optimizer
             # 5. Update scaler for mixed precision training
-            
-            # Birger: 
+
             optim.zero_grad()
             images = [img.to(device) for img in images]
             targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
             
-
             with autocast(enabled=use_amp):
               loss_dict = model(images, targets)
               tot_loss = sum(loss for loss in loss_dict.values())
-    
             scaler.scale(tot_loss).backward()
             scaler.step(optim)
             scaler.update()
             loss_sum += tot_loss.item()
             pbar.set_postfix(loss=f"{tot_loss.item():.4f}")
-        
+
+        # ===================================================
         sched.step()            
-        #Given
         avg_loss = loss_sum / len(train_loader)
         save_jsonl([{"epoch": epoch, "loss": avg_loss}], os.path.join(args.output, "logs.jsonl"))
 
@@ -165,19 +177,15 @@ def main():
         # 4. Compute final mAP and extract the "map" value
         # Handle exceptions gracefully and set map50 = -1.0 if evaluation fails
         
-        # Birger:
-        
         model.eval()
         metric = mAP(iou_type='bbox')
         try:
           with torch.no_grad():
-            for images, targets in train_loader:
+            for images, targets in val_loader:
               images = [img.to(device) for img in images]
               targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
               outputs = model(images)  
-
               metric.update(outputs, targets)
-
           results = metric.compute()
           map50 = results['map_50']
           
@@ -188,6 +196,10 @@ def main():
 
         is_best = map50 > best_map
         best_map = max(best_map, map50)
+
+        data['avg_training_loss'].append(avg_loss)
+        data['map_on_validation'].append(map50)
+        data['epoch_number'] = epoch + 1
 
         ckpt = {
             "epoch": epoch,
@@ -201,7 +213,8 @@ def main():
         if is_best:
             torch.save(ckpt, os.path.join(args.output, "best.pt"))
         print(f"[epoch {epoch}] avg_loss={avg_loss:.4f}  mAP@0.5={map50:.4f}  best={best_map:.4f}")
-        torch.save(model.state_dict(), '/content/drive/MyDrive/checkpoints/model_epoch_10.pt')
+        torch.save(model.state_dict(), file_path)
+        torch.save(data, data_file_path)
 
 if __name__ == "__main__":
     main()

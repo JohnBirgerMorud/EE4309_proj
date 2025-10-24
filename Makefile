@@ -30,7 +30,7 @@ samples:  ## Download sample images for inference testing
 	bash scripts/download.sh
 
 train:  ## Train the model (override MODEL=resnet50 etc.)
-	bash scripts/train.sh "$(OUTPUT)" "$(EPOCHS)" "$(BATCH_SIZE)" "$(MODEL_NORMALIZED)"
+	bash scripts/train.sh "$(OUTPUT)" "$(EPOCHS)" "$(BATCH_SIZE)" "$(MODEL_NORMALIZED)" "${LR}" "$(N_WORKERS)"
 
 eval:  ## Evaluate the model (override WEIGHTS=... MODEL=...)
 	bash scripts/evaluate.sh "$(WEIGHTS)" "$(IMAGE_SET)" "$(SUBSET_SIZE)" "$(MODEL_NORMALIZED)"
