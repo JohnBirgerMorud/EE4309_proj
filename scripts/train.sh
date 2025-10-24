@@ -29,7 +29,7 @@ python3 -m src.engine.train \
   --lr "$LR" \
   --weight-decay 1e-4 \
   --momentum 0.9 \
-  --num-workers {$N_WORKERS} \
+  --num-workers "$N_WORKERS" \
   --output "$OUTPUT" \
   --model "$MODEL" \
   --seed 42 \
