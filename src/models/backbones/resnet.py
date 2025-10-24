@@ -240,8 +240,8 @@ def build_resnet50_fpn_backbone(config: Optional[ResNetBackboneConfig] = None) -
     
     if config is None:
       config = ResNetBackboneConfig()
-    config.pretrained = True
-    config.weights = "IMAGENET1K_V1"
+    # config.pretrained = True
+    # config.weights = "IMAGENET1K_V1"
 
     _load_pretrained_weights(RN, config)
     _freeze_backbone_layers(RN, config.trainable_layers)

@@ -114,8 +114,8 @@ def main():
     out_dir.mkdir(parents=True, exist_ok=True)
     best_map = -1.0
 
-    file_path = '/content/drive/MyDrive/checkpoints/resnet_pretrained_tor1830.pt'
-    data_file_path = '/content/drive/MyDrive/checkpoints/data.txt'
+    file_path = '/content/drive/MyDrive/checkpoints/resnet_without_pre.pt'
+    data_file_path = '/content/drive/MyDrive/checkpoints/data_resnet_without_pre.txt'
     if os.path.exists(data_file_path) and os.path.getsize(data_file_path) == 0:
         data = {
             'avg_training_loss': [],
