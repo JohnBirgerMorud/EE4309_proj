@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-import os, argparse, time
+import os
+import argparse
 from pathlib import Path
-from typing import Dict
 import torch
 from torch.utils.data import DataLoader
 from torch.optim import SGD
@@ -56,8 +56,14 @@ def main():
         # Calculate split point (80% train, 20% val)
         if args.train_subset_size or args.val_subset_size:
             # Use specified subset sizes with bounds checking
-            train_size = args.train_subset_size if args.train_subset_size else int(0.8 * total_size)
-            val_size = args.val_subset_size if args.val_subset_size else int(0.2 * total_size)
+            train_size = (
+                args.train_subset_size
+                if args.train_subset_size
+                else int(0.8 * total_size)
+            )
+            val_size = (
+                args.val_subset_size if args.val_subset_size else int(0.2 * total_size)
+            )
 
             end_train = min(train_size, total_size)
             end_val = min(end_train + val_size, total_size)
@@ -89,9 +95,19 @@ def main():
         else:
             val_set = base_val
     train_loader = DataLoader(
-        train_set, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers, collate_fn=collate_fn
+        train_set,
+        batch_size=args.batch_size,
+        shuffle=True,
+        num_workers=args.num_workers,
+        collate_fn=collate_fn,
     )
-    val_loader = DataLoader(val_set, batch_size=1, shuffle=False, num_workers=args.num_workers, collate_fn=collate_fn)
+    val_loader = DataLoader(
+        val_set,
+        batch_size=1,
+        shuffle=False,
+        num_workers=args.num_workers,
+        collate_fn=collate_fn,
+    )
 
     # Resolve default output directory after parsing to depend on the model name.
     output_dir = args.output or f"runs/{args.model}_voc07"
@@ -102,7 +118,9 @@ def main():
     model.to(device)
 
     params = [p for p in model.parameters() if p.requires_grad]
-    optim = SGD(params, lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
+    optim = SGD(
+        params, lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay
+    )
 
     sched = StepLR(optim, step_size=6, gamma=0.1)
 
@@ -114,19 +132,15 @@ def main():
     out_dir.mkdir(parents=True, exist_ok=True)
     best_map = -1.0
 
-    experiment = 'without_0005_4'
-    file_path = f'/content/drive/MyDrive/checkpoints/resnet_{experiment}.pt'
-    data_file_path = f'/content/drive/MyDrive/checkpoints/data_{experiment}.txt'
+    experiment = "vit_without_001_4"
+    file_path = f"/content/drive/MyDrive/checkpoints/{experiment}.pt"
+    data_file_path = f"/content/drive/MyDrive/checkpoints/data_{experiment}.txt"
     if not os.path.exists(data_file_path) or os.path.getsize(data_file_path) == 0:
-        data = {
-            'avg_training_loss': [],
-            'map_on_validation': [],
-            'epoch_number' : 1
-            }
+        data = {"avg_training_loss": [], "map_on_validation": [], "epoch_number": 1}
         torch.save(data, data_file_path)
-    else: 
+    else:
         data = torch.load(data_file_path)
-     
+
     if not os.path.exists(file_path) or os.path.getsize(file_path) == 0:
         print("Files emtpy\n")
         torch.save(model.state_dict(), file_path)
@@ -164,7 +178,10 @@ def main():
         # ===================================================
         sched.step()            
         avg_loss = loss_sum / len(train_loader)
-        save_jsonl([{"epoch": epoch, "loss": avg_loss}], os.path.join(args.output, "logs.jsonl"))
+        save_jsonl(
+            [{"epoch": epoch, "loss": avg_loss}],
+            os.path.join(args.output, "logs.jsonl"),
+        )
 
         # ===== STUDENT TODO: Implement mAP evaluation =====
         # Hint: Implement validation loop to compute mAP@0.5:
@@ -178,7 +195,7 @@ def main():
         # Handle exceptions gracefully and set map50 = -1.0 if evaluation fails
         
         model.eval()
-        metric = mAP(iou_type='bbox')
+        metric = mAP(iou_type="bbox")
         try:
           with torch.no_grad():
             for images, targets in val_loader:

@@ -79,12 +79,11 @@ class PatchEmbed(nn.Module):
         # 1. Use self.proj (conv2d) to project patches to embedding dimension
         # 2. Permute from (B, C, H, W) to (B, H, W, C) format for transformer
         # This is the crucial first step of ViT that converts images to tokens
-        
-        #BIRGER: 
-        x_proj = self.proj(x)
-        return x.proj(0, 2, 3, 1)
-        
-        
+
+        x = self.proj(x)
+        x = x.permute(0, 2, 3, 1).contiguous()
+        return x
+
 
 def get_rel_pos(q_size, k_size, rel_pos):
     """Get relative positional embeddings according to query/key shapes."""
@@ -119,9 +118,11 @@ def add_decomposed_rel_pos(attn, q, rel_pos_h, rel_pos_w, q_size, k_size):
     rel_h = torch.einsum("bhwc,hkc->bhwk", r_q, Rh)
     rel_w = torch.einsum("bhwc,wkc->bhwk", r_q, Rw)
 
-    attn = (attn.view(B, q_h, q_w, k_h, k_w) + rel_h[:, :, :, :, None] + rel_w[:, :, :, None, :]).view(
-        B, q_h * q_w, k_h * k_w
-    )
+    attn = (
+        attn.view(B, q_h, q_w, k_h, k_w)
+        + rel_h[:, :, :, :, None]
+        + rel_w[:, :, :, None, :]
+    ).view(B, q_h * q_w, k_h * k_w)
     return attn
 
 
@@ -160,11 +161,40 @@ class Attention(nn.Module):
         # 5. Apply softmax to get attention weights
         # 6. Apply attention to values: Attention @ V
         # 7. Reshape and apply output projection
-        raise NotImplementedError("Attention.forward() not implemented")
+
+        B, H, W, C = x.shape
+        d_k = C // self.num_heads
+        qkv = self.qkv(x).reshape(B, H * W, 3, self.num_heads, d_k)
+
+        Q, K, V = qkv.unbind(2)
+        Q = Q.permute(0, 2, 1, 3)
+        K = K.permute(0, 2, 1, 3)
+        V = V.permute(0, 2, 1, 3)
+
+        attn_scores = (Q @ torch.transpose(K, -1, -2)) / math.sqrt(d_k)
+        B, HN, N, _ = attn_scores.shape
+
+
+        for h in range(self.num_heads):
+            Q_head = Q[:, h, :, :]
+            attn_scores[:, h, :, :] += add_decomposed_rel_pos(
+                attn_scores[:, h, :, :],
+                Q_head,
+                self.rel_pos_h,
+                self.rel_pos_w,
+                (H, W),
+                (H, W),
+            )
+        attn_weigths = torch.softmax(attn_scores, dim=-1)
+        out = (attn_weigths @ V).transpose(1, 2).reshape(B, H, W, C)
+        self.proj(out)
+        return out
         # ==========================================================
 
 
-def window_partition(x: torch.Tensor, window_size: int) -> Tuple[torch.Tensor, Tuple[int, int]]:
+def window_partition(
+    x: torch.Tensor, window_size: int
+) -> Tuple[torch.Tensor, Tuple[int, int]]:
     """Partition into non-overlapping windows with padding if needed."""
 
     B, H, W, C = x.shape
@@ -232,7 +262,25 @@ class Block(nn.Module):
         # 4. Apply second layer norm and MLP
         # 5. Add second skip connection with dropout path
         # Remember to handle window partitioning when window_size > 0
-        raise NotImplementedError("Block.forward() not implemented")
+
+        B, H, W, C = x.shape
+        identity = x
+        if self.window_size > 0:
+            windows, (Hp, Wp) = window_partition(x, self.window_size)
+            x = self.norm1(windows)
+            x = self.attn(x)
+            x = window_unpartition(x, self.window_size, (Hp, Wp), (H, W))
+        else:
+            x = self.norm1(x)
+            x = self.attn(x)
+
+        x = identity + self.drop_path(x)
+        identity = x
+
+        x = self.norm2(x)
+        x = self.mlp(x)
+        x = identity + self.drop_path(x)
+        return x
         # ==========================================================
 
 
@@ -246,7 +294,30 @@ def get_abs_pos(abs_pos: torch.Tensor, hw: Tuple[int, int], has_cls_token: bool 
     # 4. If size mismatch, use F.interpolate to resize embeddings
     # 5. Return reshaped positional embeddings in (1, H, W, C) format
     # This allows ViT to handle different input sizes than pretraining
-    raise NotImplementedError("get_abs_pos() not implemented")
+
+    H, W = hw
+    if has_cls_token:
+        class_token = abs_pos[:, 0, :]
+        abs_pos = abs_pos[:, 1:, :]
+    _, N, C = abs_pos.shape
+
+    orig_H = orig_W = int(N**0.5)
+
+    if (H, W) != (orig_H, orig_W):
+        abs_pos = abs_pos.transpose(1, 2).reshape(1, abs_pos.shape[2], orig_H, orig_W)
+        abs_pos = F.interpolate(
+            abs_pos, size=(H, W), mode="bicubic", align_corners=False
+        )
+        abs_pos = abs_pos.reshape(1, abs_pos.shape[1], H * W).transpose(1, 2)
+
+    if has_cls_token:
+        abs_pos = torch.cat([class_token, abs_pos], dim=1)
+    else:
+        abs_pos = abs_pos
+
+    abs_pos = abs_pos.reshape(1, H, W, abs_pos.shape[2])
+    return abs_pos
+
     # ==============================================================
 
 
@@ -335,7 +406,20 @@ class ViT(nn.Module):
         # 3. Pass through all transformer blocks sequentially
         # 4. Return output in the expected format (permute to BCHW)
         # Note: Output should be a dict with the feature name as key
-        raise NotImplementedError("ViT.forward() not implemented")
+
+        B, C, H, W = x.shape
+        x = self.patch_embed(x)
+        H_p, W_p = x.shape[1:3]
+
+        pos_embed = get_abs_pos(self.pos_embed, (H_p, W_p), has_cls_token=False)
+        x = x + pos_embed
+
+        for blk in self.blocks:
+            x = blk(x)
+
+        x = torch.permute(x, (0, 3, 1, 2)).contiguous()
+        return {self._out_features[0]: x}
+
         # ========================================================
 
     def output_shape(self) -> dict[str, ShapeSpec]:
@@ -473,7 +557,22 @@ class SimpleFeaturePyramid(nn.Module):
         # 4. Handle top_block if present for additional pyramid levels
         # 5. Return dictionary mapping feature names to tensors
         # This creates the multi-scale features needed for detection
-        raise NotImplementedError("SimpleFeaturePyramid.forward() not implemented")
+
+        bottom_up_features = self.net(x)
+        main_features = bottom_up_features[self.in_feature]
+        features = {}
+        for idx, stage in enumerate(self.stages):
+            features[self._out_features[idx]] = stage(main_features)
+
+        if self.top_block is not None:
+            last_feature = features[self._out_features[len(self.stages) - 1]]
+            top_features = self.top_block(last_feature)
+            for i, f in enumerate(top_features):
+                features[f"p{len(self.stages)+i+2}"] = f
+        else:
+            features["p6"] = F.max_pool2d(features["p5"], kernel_size=1, stride=2)
+
+        return features
         # ============================================================
 
 
@@ -528,6 +627,16 @@ def build_vit_backbone(config: Optional[ViTBackboneConfig] = None) -> ViT:
     if config.freeze_patch_embed:
         for param in vit.patch_embed.parameters():
             param.requires_grad = False
+
+    ## Load pretrained weigths
+    from torchvision.models import vit_b_16, ViT_B_16_Weights
+    pretrain = True
+    if pretrain:
+        print("Pretraining ViT")
+        pretrained_vit = vit_b_16(weights=ViT_B_16_Weights.IMAGENET1K_V1)
+        missing, unexpected = vit.load_state_dict(pretrained_vit.state_dict(), strict=False)
+        print("Loaded pretrained ViT. Missing:", missing, "Unexpected:", unexpected)
+
 
     _freeze_vit_layers(vit, config.frozen_stages)
     return vit

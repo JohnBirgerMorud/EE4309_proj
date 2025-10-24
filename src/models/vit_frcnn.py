@@ -6,6 +6,8 @@ from torchvision.models.detection.rpn import AnchorGenerator
 from torchvision.ops import MultiScaleRoIAlign
 
 from .backbones.vit import ViTBackboneConfig, build_vit_fpn_backbone
+
+
 from .detection_config import (
     DEFAULT_ANCHOR_SIZES,
     DEFAULT_ASPECT_RATIOS,
@@ -19,7 +21,12 @@ from .detection_config import (
     DEFAULT_RPN_PRE_NMS_TOP_N_TRAIN,
     DEFAULT_RPN_SCORE_THRESH,
 )
-from .faster_rcnn import BackboneBundle, DetectorConfig, build_faster_rcnn, make_standard_rpn_head
+from .faster_rcnn import (
+    BackboneBundle,
+    DetectorConfig,
+    build_faster_rcnn,
+    make_standard_rpn_head,
+)
 
 
 __all__ = ["get_vit_fasterrcnn_model", "ViTBackboneConfig"]
@@ -48,5 +55,36 @@ def get_vit_fasterrcnn_model(
     # 4. Configure detection parameters in DetectorConfig
     # 5. Assemble final detector using build_faster_rcnn
     # This combines ViT features with Faster R-CNN detection framework
-    raise NotImplementedError("get_vit_fasterrcnn_model() not implemented")
+
+    fpn_backbone = build_vit_fpn_backbone(backbone_config)
+    feature_names = fpn_backbone._out_features
+    out_channels = fpn_backbone.out_channels
+    wrapped_backbone = BackboneBundle(fpn_backbone, feature_names, out_channels)
+
+    anchor_generator = AnchorGenerator(DEFAULT_ANCHOR_SIZES, DEFAULT_ASPECT_RATIOS)
+    rpn_head_factory = make_standard_rpn_head(out_channels)
+    roi_pool = MultiScaleRoIAlign(feature_names, output_size=7, sampling_ratio=2)
+
+    detector_config = DetectorConfig(
+        box_score_thresh=box_score_thresh,
+        box_nms_thresh=box_nms_thresh,
+        detections_per_img=detections_per_img,
+        rpn_pre_nms_top_n_train=rpn_pre_nms_top_n_train,
+        rpn_pre_nms_top_n_test=rpn_pre_nms_top_n_test,
+        rpn_post_nms_top_n_train=rpn_post_nms_top_n_train,
+        rpn_post_nms_top_n_test=rpn_post_nms_top_n_test,
+        rpn_nms_thresh=rpn_nms_thresh,
+        rpn_score_thresh=rpn_score_thresh,
+    )
+
+    detector = build_faster_rcnn(
+        backbone=wrapped_backbone,
+        anchor_generator=anchor_generator,
+        rpn_head_factory=rpn_head_factory,
+        roi_pool=roi_pool,
+        num_classes=num_classes,
+        config=detector_config,
+    )
+
+    return detector
     # ================================================================
