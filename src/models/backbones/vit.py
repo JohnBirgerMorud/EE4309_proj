@@ -630,13 +630,64 @@ def build_vit_backbone(config: Optional[ViTBackboneConfig] = None) -> ViT:
 
     ## Load pretrained weigths
     from torchvision.models import vit_b_16, ViT_B_16_Weights
+    def load_torchvision_weights_to_custom_vit(custom_vit):
+    # Load pretrained torchvision ViT-B/16
+        pretrained_vit = vit_b_16(weights=ViT_B_16_Weights.IMAGENET1K_V1)
+        pretrained_dict = pretrained_vit.state_dict()
+        custom_dict = custom_vit.state_dict()
+
+        mapped_dict = {}
+
+        # 1️⃣ Map patch embedding
+        mapped_dict['patch_embed.proj.weight'] = pretrained_dict['conv_proj.weight']
+        mapped_dict['patch_embed.proj.bias'] = pretrained_dict['conv_proj.bias']
+
+        # 2️⃣ Map positional embedding
+        # Resize pretrained positional embedding if shapes differ
+        if custom_dict['pos_embed'].shape != pretrained_dict['encoder.pos_embedding'].shape:
+            from torch.nn.functional import interpolate
+            cls_tok = pretrained_dict['encoder.pos_embedding'][:, :1, :]
+            pos_tok = pretrained_dict['encoder.pos_embedding'][:, 1:, :]
+
+            # reshape and interpolate
+            h = w = int(pos_tok.shape[1] ** 0.5)
+            pos_tok = pos_tok.reshape(1, h, w, -1).permute(0, 3, 1, 2)  # BCHW
+            new_h = new_w = int(custom_dict['pos_embed'].shape[1] ** 0.5)
+            pos_tok = interpolate(pos_tok, size=(new_h, new_w), mode='bilinear', align_corners=False)
+            pos_tok = pos_tok.permute(0, 2, 3, 1).reshape(1, new_h*new_w, -1)
+            mapped_dict['pos_embed'] = torch.cat([cls_tok, pos_tok], dim=1)
+        else:
+            mapped_dict['pos_embed'] = pretrained_dict['encoder.pos_embedding']
+
+        # 3️⃣ Map transformer blocks
+        for i, block in enumerate(custom_vit.blocks):
+            prefix_pretrained = f'encoder.layers.encoder_layer_{i}.'
+            prefix_custom = f'blocks.{i}.'
+
+            # Norm1
+            mapped_dict[prefix_custom + 'norm1.weight'] = pretrained_dict[prefix_pretrained + 'ln_1.weight']
+            mapped_dict[prefix_custom + 'norm1.bias'] = pretrained_dict[prefix_pretrained + 'ln_1.bias']
+
+            # Attention weights
+            mapped_dict[prefix_custom + 'attn.qkv.weight'] = pretrained_dict[prefix_pretrained + 'self_attention.in_proj_weight']
+            mapped_dict[prefix_custom + 'attn.qkv.bias'] = pretrained_dict[prefix_pretrained + 'self_attention.in_proj_bias']
+            mapped_dict[prefix_custom + 'attn.proj.weight'] = pretrained_dict[prefix_pretrained + 'self_attention.out_proj.weight']
+            mapped_dict[prefix_custom + 'attn.proj.bias'] = pretrained_dict[prefix_pretrained + 'self_attention.out_proj.bias']
+
+            # Norm2
+            mapped_dict[prefix_custom + 'norm2.weight'] = pretrained_dict[prefix_pretrained + 'ln_2.weight']
+            mapped_dict[prefix_custom + 'norm2.bias'] = pretrained_dict[prefix_pretrained + 'ln_2.bias']
+
+            # MLP
+            mapped_dict[prefix_custom + 'mlp.fc1.weight'] = pretrained_dict[prefix_pretrained + 'mlp.0.weight']
+            mapped_dict[prefix_custom + 'mlp.fc1.bias'] = pretrained_dict[prefix_pretrained + 'mlp.0.bias']
+            mapped_dict[prefix_custom + 'mlp.fc2.weight'] = pretrained_dict[prefix_pretrained + 'mlp.3.weight']
+            mapped_dict[prefix_custom + 'mlp.fc2.bias'] = pretrained_dict[prefix_pretrained + 'mlp.3.bias']
+
     pretrain = True
     if pretrain:
         print("Pretraining ViT")
-        pretrained_vit = vit_b_16(weights=ViT_B_16_Weights.IMAGENET1K_V1)
-        missing, unexpected = vit.load_state_dict(pretrained_vit.state_dict(), strict=False)
-        print("Loaded pretrained ViT. Missing:", missing, "Unexpected:", unexpected)
-
+        load_torchvision_weights_to_custom_vit(vit)
 
     _freeze_vit_layers(vit, config.frozen_stages)
     return vit
